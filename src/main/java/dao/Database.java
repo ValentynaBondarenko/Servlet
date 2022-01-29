@@ -1,35 +1,52 @@
 package dao;
 
-
 import javax.servlet.http.HttpServletResponse;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.*;
 import java.util.Calendar;
+import java.util.Properties;
 
 public class Database {
 
-    private final static String DB_URL = "jdbc:mysql://localhost:3307/userstore";
-    static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
+    private final static String DB_URL = "db.db_url";
+    static final String JDBC_DRIVER = "db.jdbc_driver";
 
-    private final static String USER = "root";
-    private final static String PASS = "rootbond";
+    private final static String USER = "db.user";
+    private final static String PASS = "db.pass";
 
-    private final static String INSERT_NEW = "INSERT INTO users VALUES (?,?,?,?,?)";
-    private final static String DELETE = "DELETE FROM users WHERE id=?";
-    private final static String query = "SELECT id, firstName, lastName, salary, dateOfBirth FROM users";
+    private final static String INSERT_NEW = "db.insert_new";
+    private final static String DELETE = "db.delete";
+    private final static String query = "db.query";
 
-    public Connection connectionToDatabase() throws SQLException, ClassNotFoundException {
-        Class.forName(JDBC_DRIVER);
+    Properties properties = new Properties();
 
-        Connection connection = DriverManager.getConnection(DB_URL, USER, PASS);
+    private void loadFileWithDatabaseProperties() throws IOException {
+        FileInputStream fileInputStream = new FileInputStream("src/main/resources/application.properties");
+        if (fileInputStream != null) {
+            properties.load(fileInputStream);
+        } else {
+            throw new FileNotFoundException("property File'" + fileInputStream + "'not found");
+        }
+    }
+
+    public Connection connectionToDatabase() throws SQLException, ClassNotFoundException, IOException {
+        loadFileWithDatabaseProperties();
+        Class.forName(properties.getProperty(JDBC_DRIVER));
+
+        Connection connection = DriverManager.getConnection(properties.getProperty(DB_URL), properties.getProperty(USER), properties.getProperty(PASS));
 
         return connection;
     }
 
-    public void addUsers(int id, String firstName, String lastName, int salary, String dateOfBirth) throws SQLException {
+    public void addUsers(int id, String firstName, String lastName, int salary, String dateOfBirth) throws SQLException, IOException {
+        loadFileWithDatabaseProperties();
+
         try (Connection connection = connectionToDatabase();
-             PreparedStatement preparedStatement = connection.prepareStatement(INSERT_NEW)) {
+
+             PreparedStatement preparedStatement = connection.prepareStatement(properties.getProperty(INSERT_NEW))) {
 
             preparedStatement.setInt(1, Integer.parseInt(String.valueOf(id)));
             preparedStatement.setString(2, firstName);
@@ -39,33 +56,34 @@ public class Database {
 
             preparedStatement.executeUpdate();
 
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             throw new SQLException("Cant connect to database");
         } catch (ClassNotFoundException e) {
             throw new SQLException("Cant insert user into database");
         }
     }
 
+    public void deleteUsers(int id) throws SQLException, IOException {
+        loadFileWithDatabaseProperties();
 
-    public void deleteUsers(int id) throws SQLException {
         try (Connection connection = connectionToDatabase();
-             PreparedStatement preparedStatement = connection.prepareStatement(DELETE)) {
+             PreparedStatement preparedStatement = connection.prepareStatement(properties.getProperty(DELETE))) {
 
             preparedStatement.setInt(1, Integer.parseInt(String.valueOf(id)));
             preparedStatement.executeUpdate();
 
-        } catch (SQLException e) {
+        } catch (SQLException | IOException e) {
             throw new SQLException("Cant connect to database");
         } catch (ClassNotFoundException e) {
             throw new SQLException("Cant delete user from database");
         }
     }
 
-    public void allUsers(HttpServletResponse response) throws SQLException {
-
+    public void allUsers(HttpServletResponse response) throws SQLException, IOException {
+        loadFileWithDatabaseProperties();
         try (Connection connection = connectionToDatabase();
              Statement statement = connection.createStatement()) {
-            ResultSet resultSet = statement.executeQuery(query);
+            ResultSet resultSet = statement.executeQuery(properties.getProperty(query));
 
             try (PrintWriter out = response.getWriter()) {
                 out.print(" <table border=\"2\">\n" + "<tr>\n" + "<th>id</th>\n" + "<th>firstName</th>\n" +
@@ -106,3 +124,5 @@ public class Database {
         }
     }
 }
+
+

@@ -1,13 +1,14 @@
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
 import servlets.AddUserServlet;
 import servlets.AllRequestsServlet;
-import org.eclipse.jetty.servlet.ServletHolder;
 import servlets.AllUsersServlet;
 import servlets.DeleteUserServlet;
 
 
 public class Main {
+
     public static void main(String[] args) throws Exception {
 
         AllRequestsServlet allRequestsServlet = new AllRequestsServlet();
@@ -26,7 +27,5 @@ public class Main {
         server.setHandler(context);
 
         server.start();
-
     }
 }
-
